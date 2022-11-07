@@ -1,11 +1,10 @@
 EXE = test
 SRCS = $(wildcard *.cc)
 OBJS = $(patsubst %.cc, build/%.o, ${SRCS})
+HEADERS = $(wildcard *.h)
 
 CXXFLAGS = -Wall -Werror -g -I.
 LDFLAGS = 
-
-CXXFLAGS += ${HEADERS}
 
 LDFLAGS += $(shell root-config --libs)
 CXXFLAGS += $(shell root-config --cflags)
