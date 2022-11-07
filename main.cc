@@ -33,13 +33,15 @@ auto main() -> int {
     auto pz = TTreeReaderValue<double>(treeReader, "gamma.pz");
     auto e  = TTreeReaderValue<double>(treeReader, "gamma.E");
 
-//    while (treeReader.Next()) {
-//        auto gamma = Gamma{*px, *py, *pz, *e};
-//        std::cout << gamma << "\n";
-//    }
-
-    auto mixer = Mixer<double>(10, 6, 15);
+    auto mixer = Mixer<Gamma>(10, 6, 15);
     mixer.SetMixingType11();
+    mixer.SetCentralityGetterFunction([](const Gamma& gamma) -> double {
+            return 1.;
+        });
+    mixer.SetVertexGetterFunction([](const Gamma& gamma) -> double {
+            return 1.;
+        });
+
     mixer.Print();
 
     return 0;

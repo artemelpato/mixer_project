@@ -16,15 +16,19 @@ template<class DataType>
 class Mixer {
     using EventType = std::vector<DataType>;
     using PoolType = std::vector<EventType>;
+
 private:
     std::array<int, 3> mixingTypes_;
-    int centPools_;
-    int vertexPools_;
-    int poolDepth_;
+    std::size_t centPools_;
+    std::size_t vertexPools_;
+    std::size_t poolDepth_;
     std::vector<PoolType> pools_;
 
     std::function<double(DataType)> getCent_;
     std::function<double(DataType)> getVert_;
+    
+    std::array<std::size_t, 2> centRange_ = {0, 100};
+    std::array<double, 2> vertRange_ = {-30.0, 30.0};
 
 public: 
     Mixer() : mixingTypes_(), centPools_(1), vertexPools_(1), poolDepth_(5) {
@@ -34,7 +38,7 @@ public:
 
     Mixer(int centPools, int vertexPools, int poolDepth) 
       : mixingTypes_(), centPools_(centPools), vertexPools_(vertexPools), 
-        poolDepth_(poolDepth), {
+        poolDepth_(poolDepth) {
         
         mixingTypes_.at(0) = 1;
         pools_.reserve(centPools_ * vertexPools_);
