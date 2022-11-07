@@ -1,0 +1,21 @@
+[
+    {
+        "arguments": [
+            "g++",
+            "-c",
+            "-Wall",
+            "-Werror",
+            "-g",
+            "-I.",
+            "-pthread",
+            "-std=c++14",
+            "-m64",
+            "-I/usr/share/ROOT/include",
+            "-o",
+            "build/main.o",
+            "main.cc"
+        ],
+        "directory": "/home/nuph118class13/files/mixer_project",
+        "file": "main.cc"
+    }
+]
