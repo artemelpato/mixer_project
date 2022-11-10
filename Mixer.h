@@ -7,14 +7,15 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
+#include <cassert>
 
 #include <TH1D.h>
 #include <TH2D.h> 
 #include <TH3D.h>
 
-template<class DataType>
+template<class EventType>
 class Mixer {
-    using EventType = std::vector<DataType>;
     using PoolType = std::vector<EventType>;
 
 private:
@@ -24,10 +25,10 @@ private:
     std::size_t poolDepth_;
     std::vector<PoolType> pools_;
 
-    std::function<double(DataType)> getCent_;
-    std::function<double(DataType)> getVert_;
+    std::function<double(const EventType&)> getCent_;
+    std::function<double(const EventType&)> getVert_;
     
-    std::array<std::size_t, 2> centRange_ = {0, 100};
+    std::array<double, 2> centRange_ = {0, 100};
     std::array<double, 2> vertRange_ = {-30.0, 30.0};
 
 public: 
@@ -41,7 +42,7 @@ public:
         poolDepth_(poolDepth) {
         
         mixingTypes_.at(0) = 1;
-        pools_.reserve(centPools_ * vertexPools_);
+        pools_.resize(centPools_ * vertexPools_);
     }
 
     ~Mixer() {};
@@ -49,7 +50,10 @@ public:
     auto SetMixingType11() -> void { mixingTypes_.at(0) = 1; }
     auto SetMixingType12() -> void { mixingTypes_.at(1) = 1; }
     auto SetMixingType22() -> void { mixingTypes_.at(2) = 1; }
-    auto UnsetMixingTypes() -> void { memset(mixingTypes_.data(), 0, 3 * sizeof(int)); }
+    auto UnsetMixingTypes() -> void { 
+        std::fill(begin(mixingTypes_), end(mixingTypes_), 0); 
+        return;
+    }
 
     auto Print() const -> void { 
         std::ostringstream str;
@@ -69,16 +73,65 @@ public:
         return;
     }
 
-    auto SetCentralityGetterFunction(std::function<double(DataType)> getter) {
+    auto SetCentralityGetterFunction(std::function<double(const EventType&)> getter) {
         getCent_ = getter;
         return;
     }
-    auto SetVertexGetterFunction(std::function<double(DataType)> getter) {
+    auto SetVertexGetterFunction(std::function<double(const EventType&)> getter) {
         getVert_ = getter;
         return;
     }
-    auto FillPools(const EventType& event) -> void {}
+    auto FillPools(const EventType& event) -> void {
+        const auto centrality = getCent_(event);
+        const auto vertex = getVert_(event);
+    
+        assert(centrality > centRange_[0] && centrality < centRange_[1] 
+                && "Centrality out of range!");
+        assert(vertex > vertRange_[0] && vertex < vertRange_[1]
+                && "Vertex out of range");
 
+        const auto index = GetPoolIndex(centrality, vertex);
+        pools_[index].push_back(event);
+            
+        for (auto& pool : pools_) {
+            if (pool.size() >= poolDepth_) {
+                DrainPools();
+                pool.clear();
+            }
+        }
+
+        return;
+    }
+
+    auto DrainPools() -> void {
+        FillFG();
+        FillBG();
+        return;
+    }
+    
+private:
+    auto GetPoolIndex(const double centrality, const double vertex) -> std::size_t {
+        const auto centWidth = (centRange_[1] - centRange_[0]) / centPools_;
+        const auto vertWidth = (vertRange_[1] - vertRange_[0]) / vertexPools_;
+
+        const auto centIndex = static_cast<std::size_t>(
+                (centrality - centRange_[0]) / centWidth);
+        const auto vertIndex = static_cast<std::size_t>(
+                (vertex - vertRange_[0]) / vertWidth);
+
+        const auto poolIndex = centIndex * vertexPools_ + vertIndex;
+        return poolIndex;
+    }
+
+    auto FillFG() -> void {
+        std::cout << "Filling FG...\n";
+        return;
+    }
+
+    auto FillBG() -> void {
+        std::cout << "Filling BG...\n";
+        return;
+    }
 };
 
 #endif
