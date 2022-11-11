@@ -14,6 +14,7 @@
 #include <TH1D.h>
 #include <TH2D.h> 
 #include <TH3D.h>
+#include <TFile.h>
 
 template<class EventType>
 class Mixer {
@@ -26,34 +27,49 @@ private:
     std::size_t poolDepth_;
     std::vector<PoolType> pools_;
 
+    std::array<double, 2> centRange_ = {-0.01, 100.01};
+    std::array<double, 2> vertRange_ = {-30.0, 30.0};
+    
     std::function<double(const EventType&)> getCent_;
     std::function<double(const EventType&)> getVert_;
-    
-    std::array<double, 2> centRange_ = {0, 100};
-    std::array<double, 2> vertRange_ = {-30.0, 30.0};
+    std::function<std::size_t(const EventType&)> getSize_;
 
-    
     std::vector<std::unique_ptr<TH1D>> oneDimHists_;
-    std::vector<std::function<double(const EventType&)>> oneDimXFuncs_;
+    std::vector<std::function<double(
+            const EventType&, std::size_t,
+            const EventType&, std::size_t)>> oneDimXFuncs_;
 
     std::vector<std::unique_ptr<TH2D>> twoDimHists_;
-    std::vector<std::function<double(const EventType&)>> twoDimXFuncs_;
-    std::vector<std::function<double(const EventType&)>> twoDimYFuncs_;
+    std::vector<std::function<double(
+            const EventType&, std::size_t,
+            const EventType&, std::size_t)>> twoDimXFuncs_;
+    std::vector<std::function<double(
+            const EventType&, std::size_t,
+            const EventType&, std::size_t)>> twoDimYFuncs_;
 
     std::vector<std::unique_ptr<TH3D>> threeDimHists_;
-    std::vector<std::function<double(const EventType&)>> threeDimXFuncs_;
-    std::vector<std::function<double(const EventType&)>> threeDimYFuncs_;
-    std::vector<std::function<double(const EventType&)>> threeDimZFuncs_;
+    std::vector<std::function<double(
+            const EventType&, std::size_t,
+            const EventType&, std::size_t)>> threeDimXFuncs_;
+    std::vector<std::function<double(
+            const EventType&, std::size_t,
+            const EventType&, std::size_t)>> threeDimYFuncs_;
+    std::vector<std::function<double(
+            const EventType&, std::size_t,
+            const EventType&, std::size_t)>> threeDimZFuncs_;
+
+    std::unique_ptr<TFile> outputFile_;
 
 public: 
-    Mixer() : mixingTypes_(), centPools_(1), vertexPools_(1), poolDepth_(5) {
+    Mixer() : mixingTypes_(), centPools_(1), vertexPools_(1), poolDepth_(5),
+              outputFile_() {
         pools_.reserve(centPools_ * vertexPools_);
         mixingTypes_.at(0) = 1; // default mixing type is 11;
     }
 
-    Mixer(int centPools, int vertexPools, int poolDepth) 
+    Mixer(int centPools, int vertexPools, int poolDepth, const char* name) 
       : mixingTypes_(), centPools_(centPools), vertexPools_(vertexPools), 
-        poolDepth_(poolDepth) {
+        poolDepth_(poolDepth), outputFile_(std::make_unique<TFile>(name, "recreate")) {
         
         mixingTypes_.at(0) = 1;
         pools_.resize(centPools_ * vertexPools_);
@@ -84,24 +100,24 @@ public:
         threeDimHists_.push_back(std::make_unique<TH3D>(args...));
     }
 
-    auto AddOneDimXFunc(std::function<double(const EventType&)> func) -> void {
+    auto AddOneDimXFunc(std::function<double(const EventType&, std::size_t, const EventType&, std::size_t)> func) -> void {
         oneDimXFuncs_.push_back(func);
     }
 
-    auto AddTwoDimXFunc(std::function<double(const EventType&)> func) -> void {
+    auto AddTwoDimXFunc(std::function<double(const EventType&, std::size_t, const EventType&, std::size_t)> func) -> void {
         twoDimXFuncs_.push_back(func);
     }
-    auto AddTwoDimYFunc(std::function<double(const EventType&)> func) -> void {
+    auto AddTwoDimYFunc(std::function<double(const EventType&, std::size_t, const EventType&, std::size_t)> func) -> void {
         twoDimYFuncs_.push_back(func);
     }
 
-    auto AddThreeDimXFunc(std::function<double(const EventType&)> func) -> void {
+    auto AddThreeDimXFunc(std::function<double(const EventType&, std::size_t, const EventType&, std::size_t)> func) -> void {
         threeDimXFuncs_.push_back(func);
     }
-    auto AddThreeDimYFunc(std::function<double(const EventType&)> func) -> void {
+    auto AddThreeDimYFunc(std::function<double(const EventType&, std::size_t, const EventType&, std::size_t)> func) -> void {
         threeDimYFuncs_.push_back(func);
     }
-    auto AddThreeDimZFunc(std::function<double(const EventType&)> func) -> void {
+    auto AddThreeDimZFunc(std::function<double(const EventType&, std::size_t, const EventType&, std::size_t)> func) -> void {
         threeDimZFuncs_.push_back(func);
     }
 
@@ -137,18 +153,30 @@ public:
             str << hist->GetName() << '\n';
         }
 
+        str << "\nFuncs:\n";
+        str << "1D X: " << oneDimXFuncs_.size() << "\n\n";
+
+        str << "2D X: " << twoDimXFuncs_.size() << '\n';
+        str << "2D Y: " << twoDimYFuncs_.size() << "\n\n";
+
+        str << "3D X: " << threeDimXFuncs_.size() << '\n';
+        str << "3D Y: " << threeDimYFuncs_.size() << '\n';
+        str << "3D Y: " << threeDimZFuncs_.size() << "\n\n";
+
         std::cout << str.str();
         return;
     }
 
     auto SetCentralityGetterFunction(std::function<double(const EventType&)> getter) {
         getCent_ = getter;
-        return;
     }
     auto SetVertexGetterFunction(std::function<double(const EventType&)> getter) {
         getVert_ = getter;
-        return;
     }
+    auto SetSizeGetterFunction(std::function<std::size_t(const EventType&)> func) -> void {
+        getSize_ = func;
+    }
+
     auto FillPools(const EventType& event) -> void {
         const auto centrality = getCent_(event);
         const auto vertex = getVert_(event);
@@ -163,7 +191,7 @@ public:
             
         for (auto& pool : pools_) {
             if (pool.size() >= poolDepth_) {
-                DrainPools();
+                DrainPool(pool);
                 pool.clear();
             }
         }
@@ -171,9 +199,32 @@ public:
         return;
     }
 
-    auto DrainPools() -> void {
-        FillFG();
-        FillBG();
+    auto DrainPool(const PoolType& pool) -> void {
+        FillFG(pool);
+        FillBG(pool);
+        return;
+    }
+
+    auto DrainAllPools() -> void { 
+        for (auto& pool : pools_) {
+            DrainPool(pool);
+        }
+        return;
+    }
+
+    auto DumpHistos() -> void {
+        outputFile_->cd();
+        for (const auto& hist : oneDimHists_) {
+            hist->Write();
+        }
+        for (const auto& hist : twoDimHists_) {
+            hist->Write();
+        }
+        for (const auto& hist : threeDimHists_) {
+            hist->Write();
+        }
+        outputFile_->Close();
+
         return;
     }
     
@@ -191,13 +242,33 @@ private:
         return poolIndex;
     }
 
-    auto FillFG() -> void {
-        std::cout << "Filling FG...\n";
+    auto FillFG(const PoolType& pool) -> void {
+        for (const auto& event : pool) {
+            const auto eventSize = getSize_(event);
+            for (auto i1 = 0ull; i1 < eventSize; ++i1) {
+                for (auto i2 = i1 + 1; i2 < eventSize; ++i2) {
+
+                    for (auto iOneDim = 0ull; iOneDim < oneDimHists_.size(); ++iOneDim) {
+                        const auto fillXValue = oneDimXFuncs_[iOneDim](event, i1, event, i2);
+                        oneDimHists_[iOneDim]->Fill(fillXValue);
+                    }
+
+                    for (auto iTwoDim = 0ull; iTwoDim < twoDimHists_.size(); ++iTwoDim) {
+                        const auto fillXValue = twoDimXFuncs_[iTwoDim](event, i1, event, i2);
+                        const auto fillYValue = twoDimYFuncs_[iTwoDim](event, i1, event, i2);
+                        twoDimHists_[iTwoDim]->Fill(fillXValue, fillYValue);
+                    }
+
+                    for (auto iThreeDim = 0ull; iThreeDim < threeDimHists_.size(); ++iThreeDim) {
+                    }
+
+                }
+            }
+        }
         return;
     }
 
-    auto FillBG() -> void {
-        std::cout << "Filling BG...\n";
+    auto FillBG(const PoolType& pool) -> void {
         return;
     }
 };

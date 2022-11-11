@@ -33,27 +33,52 @@ struct Event {
     std::vector<Gamma> clusters;
 };
 
+auto GetMass(const Event& event1, std::size_t i1, 
+             const Event& event2, std::size_t i2) -> double {
+    const auto gamma1 = event1.clusters[i1];
+    const auto gamma2 = event2.clusters[i2];
+
+    const auto px = gamma1.px + gamma2.px;
+    const auto py = gamma1.py + gamma2.py;
+    const auto pz = gamma1.pz + gamma2.py;
+    const auto E  = gamma1.E  + gamma2.E;
+
+    const auto mass = std::sqrt(E*E - px*px - py*py - pz*pz);
+    return mass;
+}
+
+auto GetPt(const Event& event1, std::size_t i1,
+           const Event& event2, std::size_t i2) -> double {
+    const auto gamma1 = event1.clusters[i1];
+    const auto gamma2 = event2.clusters[i2];
+
+    const auto px = gamma1.px + gamma2.px;
+    const auto py = gamma1.py + gamma2.py;
+
+    const auto pt = std::sqrt(px*px + py*py);
+    return pt;
+    
+}
+
 auto main() -> int {
-    Mixer<Event> mixer(10, 6, 15);
+    Mixer<Event> mixer(10, 6, 15, "output/out.root");
     mixer.SetMixingType11(1);
     mixer.SetCentralityGetterFunction([](const Event& event) -> double {
-            return 99.0;
+            return event.centrality;
         });
     mixer.SetVertexGetterFunction([](const Event& event) -> double {
-            return 29.0;
+            return event.vertex;
         });
+    mixer.SetSizeGetterFunction([](const Event& event) -> std::size_t {
+            return event.clusters.size();
+            });
 
-    mixer.AddOneDimHist("hist1", "", 100, 0, 1);
-    mixer.AddOneDimHist("hist2", "", 100, 0, 1);
-    mixer.AddOneDimHist("hist3", "", 100, 0, 1);
-    mixer.AddOneDimHist("hist4", "", 100, 0, 1);
-    mixer.AddOneDimHist("hist5", "", 100, 0, 1);
+    mixer.AddOneDimHist("MassHist", "MIXERRRR!!!", 3000, 0, 3);
+    mixer.AddOneDimXFunc(GetMass);
 
-    mixer.AddTwoDimHist("hist3D1", "", 100, 0, 1, 100, 0, 1);
-    mixer.AddTwoDimHist("hist3D2", "", 100, 0, 1, 100, 0, 1);
-    mixer.AddTwoDimHist("hist3D3", "", 100, 0, 1, 100, 0, 1);
-    mixer.AddTwoDimHist("hist3D4", "", 100, 0, 1, 100, 0, 1);
-    mixer.AddTwoDimHist("hist3D5", "", 100, 0, 1, 100, 0, 1);
+    mixer.AddTwoDimHist("MassPtHist", "MIXER!!!", 3000, 0, 3, 150, 0, 15);
+    mixer.AddTwoDimXFunc(GetMass);
+    mixer.AddTwoDimYFunc(GetPt);
 
     mixer.Print();
 
@@ -69,29 +94,23 @@ auto main() -> int {
     auto centrality = TTreeReaderValue<double>(treeReader, "centrality");
     auto vertex = TTreeReaderValue<double>(treeReader, "vertex");
 
-    auto hist = std::make_unique<TH2D>("hist", "", 3000, 0, 3, 150, 0, 15);
-    auto outputFile = std::make_unique<TFile>("output/out.root", "recreate");
     while (treeReader.Next()) {
+        auto event = Event{};
+        event.centrality = *centrality;
+        event.vertex = *vertex;
+        //std::cout << "Centrality: " << event.centrality << '\n';
+        
         for (auto i = 0ull; i < px.GetSize(); ++i) {
-            for (auto j = i + 1; j < px.GetSize(); ++j) {
-                const auto etaPx = px.At(i) + px.At(j);
-                const auto etaPy = py.At(i) + py.At(j);
-                const auto etaPz = pz.At(i) + pz.At(j);
-                const auto etaE  = e.At(i)  + e.At(j);
+            auto gamma = Gamma{px.At(i), py.At(i), pz.At(i), e.At(i)};
+            //std::cout << gamma << '\n';
 
-
-                const auto mass = std::sqrt(etaE*etaE 
-                                            - etaPx*etaPx 
-                                            - etaPy*etaPy 
-                                            - etaPz*etaPz);
-                const auto pt = std::sqrt(etaPx*etaPx + etaPy*etaPy);
-
-                hist->Fill(mass, pt);
-            }
+            event.clusters.push_back(gamma);
         }
+
+        mixer.FillPools(event);
     }
-    outputFile->cd();
-    hist->Write();
+    mixer.DrainAllPools();
+    mixer.DumpHistos();
 
     return 0;
 }
