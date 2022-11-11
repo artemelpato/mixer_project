@@ -3,7 +3,7 @@ SRCS = $(wildcard *.cc)
 OBJS = $(patsubst %.cc, build/%.o, ${SRCS})
 HEADERS = $(wildcard *.h)
 
-CXXFLAGS = -Wall -g -I. -O3
+CXXFLAGS = -Wall -g -I. -O3 -pedantic
 LDFLAGS = 
 
 LDFLAGS += $(shell root-config --libs)

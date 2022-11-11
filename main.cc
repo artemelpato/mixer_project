@@ -38,10 +38,10 @@ auto GetMass(const Event& event1, std::size_t i1,
     const auto gamma1 = event1.clusters[i1];
     const auto gamma2 = event2.clusters[i2];
 
+    const auto E  = gamma1.E  + gamma2.E;
     const auto px = gamma1.px + gamma2.px;
     const auto py = gamma1.py + gamma2.py;
     const auto pz = gamma1.pz + gamma2.py;
-    const auto E  = gamma1.E  + gamma2.E;
 
     const auto mass = std::sqrt(E*E - px*px - py*py - pz*pz);
     return mass;
@@ -57,7 +57,20 @@ auto GetPt(const Event& event1, std::size_t i1,
 
     const auto pt = std::sqrt(px*px + py*py);
     return pt;
+}
+
+auto PairIsGood(const Event& event1, std::size_t i1,
+           const Event& event2, std::size_t i2) -> bool {
+    const auto gamma1 = event1.clusters[i1];
+    const auto gamma2 = event2.clusters[i2];
+
+    const auto E  = gamma1.E  + gamma2.E;
+    const auto deltaE = gamma1.E - gamma2.E;
+    const auto alpha = std::abs(deltaE) / E;
+    const auto alphaIsGood = alpha < 0.8;
     
+    const auto pairIsGood = alphaIsGood;
+    return pairIsGood;
 }
 
 auto main() -> int {
@@ -72,6 +85,8 @@ auto main() -> int {
     mixer.SetSizeGetterFunction([](const Event& event) -> std::size_t {
             return event.clusters.size();
             });
+
+    mixer.SetPairIsGoodFunction(PairIsGood);
 
     mixer.AddOneDimHist("MassHist", "MIXERRRR!!!", 3000, 0, 3);
     mixer.AddOneDimXFunc(GetMass);
@@ -98,12 +113,9 @@ auto main() -> int {
         auto event = Event{};
         event.centrality = *centrality;
         event.vertex = *vertex;
-        //std::cout << "Centrality: " << event.centrality << '\n';
         
         for (auto i = 0ull; i < px.GetSize(); ++i) {
             auto gamma = Gamma{px.At(i), py.At(i), pz.At(i), e.At(i)};
-            //std::cout << gamma << '\n';
-
             event.clusters.push_back(gamma);
         }
 

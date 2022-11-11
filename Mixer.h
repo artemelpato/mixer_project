@@ -59,6 +59,10 @@ private:
             const EventType&, std::size_t,
             const EventType&, std::size_t)>> threeDimZFuncs_;
 
+    std::function<double(
+            const EventType&, std::size_t,
+            const EventType&, std::size_t)> pairIsGood_;
+
     std::unique_ptr<TFile> outputFile_;
 
 public: 
@@ -180,6 +184,9 @@ public:
     auto SetSizeGetterFunction(std::function<std::size_t(const EventType&)> func) -> void {
         getSize_ = func;
     }
+    auto SetPairIsGoodFunction(std::function<bool(const EventType&, std::size_t, const EventType&, std::size_t)> func) -> void {
+        pairIsGood_ = func;
+    }
 
     auto FillPools(const EventType& event) -> void {
         const auto centrality = getCent_(event);
@@ -251,6 +258,8 @@ private:
             const auto eventSize = getSize_(event);
             for (auto i1 = 0ull; i1 < eventSize; ++i1) {
                 for (auto i2 = i1 + 1; i2 < eventSize; ++i2) {
+                    
+                    if (!pairIsGood_) continue;
 
                     for (auto iOneDim = 0ull; iOneDim < oneDimHists_.size(); ++iOneDim) {
                         const auto fillXValue = oneDimXFuncs_[iOneDim](event, i1, event, i2);
