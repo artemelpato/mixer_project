@@ -16,6 +16,7 @@
 #include <TH3D.h>
 #include <TFile.h>
 
+
 template<class EventType>
 class Mixer {
     using PoolType = std::vector<EventType>;
@@ -63,6 +64,8 @@ private:
 public: 
     Mixer() : mixingTypes_(), centPools_(1), vertexPools_(1), poolDepth_(5),
               outputFile_() {
+
+        TH1::AddDirectory(false);
         pools_.reserve(centPools_ * vertexPools_);
         mixingTypes_.at(0) = 1; // default mixing type is 11;
     }
@@ -71,11 +74,12 @@ public:
       : mixingTypes_(), centPools_(centPools), vertexPools_(vertexPools), 
         poolDepth_(poolDepth), outputFile_(std::make_unique<TFile>(name, "recreate")) {
         
+        TH1::AddDirectory(false);
         mixingTypes_.at(0) = 1;
         pools_.resize(centPools_ * vertexPools_);
     }
 
-    ~Mixer() {};
+    //~Mixer() {};
 
     auto SetMixingType11(int type) -> void { mixingTypes_.at(0) = type; }
     auto SetMixingType12(int type) -> void { mixingTypes_.at(1) = type; }
