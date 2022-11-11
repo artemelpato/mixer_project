@@ -34,16 +34,28 @@ struct Event {
 };
 
 auto main() -> int {
-    //auto mixer = Mixer<Event>(10, 6, 15);
-    //mixer.SetMixingType11();
-    //mixer.SetCentralityGetterFunction([](const Event& event) -> double {
-    //        return 99.0;
-    //    });
-    //mixer.SetVertexGetterFunction([](const Event& event) -> double {
-    //        return 29.0;
-    //    });
+    Mixer<Event> mixer(10, 6, 15);
+    mixer.SetMixingType11(1);
+    mixer.SetCentralityGetterFunction([](const Event& event) -> double {
+            return 99.0;
+        });
+    mixer.SetVertexGetterFunction([](const Event& event) -> double {
+            return 29.0;
+        });
 
-    //mixer.Print();
+    mixer.AddOneDimHist("hist1", "", 100, 0, 1);
+    mixer.AddOneDimHist("hist2", "", 100, 0, 1);
+    mixer.AddOneDimHist("hist3", "", 100, 0, 1);
+    mixer.AddOneDimHist("hist4", "", 100, 0, 1);
+    mixer.AddOneDimHist("hist5", "", 100, 0, 1);
+
+    mixer.AddTwoDimHist("hist3D1", "", 100, 0, 1, 100, 0, 1);
+    mixer.AddTwoDimHist("hist3D2", "", 100, 0, 1, 100, 0, 1);
+    mixer.AddTwoDimHist("hist3D3", "", 100, 0, 1, 100, 0, 1);
+    mixer.AddTwoDimHist("hist3D4", "", 100, 0, 1, 100, 0, 1);
+    mixer.AddTwoDimHist("hist3D5", "", 100, 0, 1, 100, 0, 1);
+
+    mixer.Print();
 
     auto inputFile = std::make_unique<TFile>("input/se-out.root", "read");
     auto tree = std::unique_ptr<TTree>{inputFile->Get<TTree>("AnalysisTree")};
@@ -67,9 +79,13 @@ auto main() -> int {
                 const auto etaPz = pz.At(i) + pz.At(j);
                 const auto etaE  = e.At(i)  + e.At(j);
 
-                const auto mass = std::sqrt(etaE*etaE - etaPx*etaPx - etaPy*etaPy - etaPz*etaPz);
+
+                const auto mass = std::sqrt(etaE*etaE 
+                                            - etaPx*etaPx 
+                                            - etaPy*etaPy 
+                                            - etaPz*etaPz);
                 const auto pt = std::sqrt(etaPx*etaPx + etaPy*etaPy);
-                std::cout << mass << "\n";
+
                 hist->Fill(mass, pt);
             }
         }

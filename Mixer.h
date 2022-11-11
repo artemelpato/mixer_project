@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <cassert>
+#include <memory>
 
 #include <TH1D.h>
 #include <TH2D.h> 
@@ -31,6 +32,19 @@ private:
     std::array<double, 2> centRange_ = {0, 100};
     std::array<double, 2> vertRange_ = {-30.0, 30.0};
 
+    
+    std::vector<std::unique_ptr<TH1D>> oneDimHists_;
+    std::vector<std::function<double(const EventType&)>> oneDimXFuncs_;
+
+    std::vector<std::unique_ptr<TH2D>> twoDimHists_;
+    std::vector<std::function<double(const EventType&)>> twoDimXFuncs_;
+    std::vector<std::function<double(const EventType&)>> twoDimYFuncs_;
+
+    std::vector<std::unique_ptr<TH3D>> threeDimHists_;
+    std::vector<std::function<double(const EventType&)>> threeDimXFuncs_;
+    std::vector<std::function<double(const EventType&)>> threeDimYFuncs_;
+    std::vector<std::function<double(const EventType&)>> threeDimZFuncs_;
+
 public: 
     Mixer() : mixingTypes_(), centPools_(1), vertexPools_(1), poolDepth_(5) {
         pools_.reserve(centPools_ * vertexPools_);
@@ -47,12 +61,48 @@ public:
 
     ~Mixer() {};
 
-    auto SetMixingType11() -> void { mixingTypes_.at(0) = 1; }
-    auto SetMixingType12() -> void { mixingTypes_.at(1) = 1; }
-    auto SetMixingType22() -> void { mixingTypes_.at(2) = 1; }
+    auto SetMixingType11(int type) -> void { mixingTypes_.at(0) = type; }
+    auto SetMixingType12(int type) -> void { mixingTypes_.at(1) = type; }
+    auto SetMixingType22(int type) -> void { mixingTypes_.at(2) = type; }
     auto UnsetMixingTypes() -> void { 
         std::fill(begin(mixingTypes_), end(mixingTypes_), 0); 
         return;
+    }
+
+    template <typename... Args>
+    auto AddOneDimHist(Args... args) -> void {
+        oneDimHists_.push_back(std::make_unique<TH1D>(args...));
+    }
+
+    template <typename... Args>
+    auto AddTwoDimHist(Args... args) -> void {
+        twoDimHists_.push_back(std::make_unique<TH2D>(args...));
+    }
+
+    template <typename... Args>
+    auto AddThreeDimHist(Args... args) -> void {
+        threeDimHists_.push_back(std::make_unique<TH3D>(args...));
+    }
+
+    auto AddOneDimXFunc(std::function<double(const EventType&)> func) -> void {
+        oneDimXFuncs_.push_back(func);
+    }
+
+    auto AddTwoDimXFunc(std::function<double(const EventType&)> func) -> void {
+        twoDimXFuncs_.push_back(func);
+    }
+    auto AddTwoDimYFunc(std::function<double(const EventType&)> func) -> void {
+        twoDimYFuncs_.push_back(func);
+    }
+
+    auto AddThreeDimXFunc(std::function<double(const EventType&)> func) -> void {
+        threeDimXFuncs_.push_back(func);
+    }
+    auto AddThreeDimYFunc(std::function<double(const EventType&)> func) -> void {
+        threeDimYFuncs_.push_back(func);
+    }
+    auto AddThreeDimZFunc(std::function<double(const EventType&)> func) -> void {
+        threeDimZFuncs_.push_back(func);
     }
 
     auto Print() const -> void { 
@@ -68,6 +118,24 @@ public:
         str << std::left << std::setw(20) << "Cent Pools: "  << centPools_ << "\n";
         str << std::left << std::setw(20) << "Vertex Pools: " << vertexPools_ << "\n";
         str << std::left << std::setw(20) << "Pools Depth: " << poolDepth_ << "\n";
+
+        str << '\n';
+        str << "One Dim Hists\n";
+        for (const auto& hist : oneDimHists_) {
+            str << hist->GetName() << '\n';
+        }
+
+        str << '\n';
+        str << "Two Dim Hists\n";
+        for (const auto& hist : twoDimHists_) {
+            str << hist->GetName() << '\n';
+        }
+
+        str << '\n';
+        str << "Three Dim Hists\n";
+        for (const auto& hist : threeDimHists_) {
+            str << hist->GetName() << '\n';
+        }
 
         std::cout << str.str();
         return;
