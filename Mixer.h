@@ -217,7 +217,7 @@ public:
     }
 
     auto DrainAllPools() -> void { 
-        for (auto& pool : pools_) {
+        for (const auto& pool : pools_) {
             DrainPool(pool);
         }
         return;
@@ -250,6 +250,7 @@ private:
                 (vertex - vertRange_[0]) / vertWidth);
 
         const auto poolIndex = centIndex * vertexPools_ + vertIndex;
+        std::cout << poolIndex << '\n';
         return poolIndex;
     }
 
@@ -259,7 +260,7 @@ private:
             for (auto i1 = 0ull; i1 < eventSize; ++i1) {
                 for (auto i2 = i1 + 1; i2 < eventSize; ++i2) {
                     
-                    if (!pairIsGood_) continue;
+                    if (!pairIsGood_(event, i1, event, i2)) continue;
 
                     for (auto iOneDim = 0ull; iOneDim < oneDimHists_.size(); ++iOneDim) {
                         const auto fillXValue = oneDimXFuncs_[iOneDim](event, i1, event, i2);

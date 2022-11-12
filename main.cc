@@ -14,6 +14,8 @@
 
 struct Gamma {
     double px, py, pz, E;
+    double x, y, z;
+    int arm, sector;
     
     friend auto operator<<(std::ostream& out, const Gamma& gamma) -> std::ostream& {
         auto str = std::ostringstream();
@@ -41,7 +43,7 @@ auto GetMass(const Event& event1, std::size_t i1,
     const auto E  = gamma1.E  + gamma2.E;
     const auto px = gamma1.px + gamma2.px;
     const auto py = gamma1.py + gamma2.py;
-    const auto pz = gamma1.pz + gamma2.py;
+    const auto pz = gamma1.pz + gamma2.pz;
 
     const auto mass = std::sqrt(E*E - px*px - py*py - pz*pz);
     return mass;
@@ -68,13 +70,16 @@ auto PairIsGood(const Event& event1, std::size_t i1,
     const auto deltaE = gamma1.E - gamma2.E;
     const auto alpha = std::abs(deltaE) / E;
     const auto alphaIsGood = alpha < 0.8;
+
+    const auto sameArm = gamma1.arm == gamma2.arm;
+    const auto sameSector = gamma1.sector == gamma2.sector;
     
-    const auto pairIsGood = alphaIsGood;
+    const auto pairIsGood = alphaIsGood && sameArm && sameSector;
     return pairIsGood;
 }
 
 auto main() -> int {
-    Mixer<Event> mixer(10, 6, 15, "output/out.root");
+    Mixer<Event> mixer(1, 1, 15, "output/out.root");
     mixer.SetMixingType11(1);
     mixer.SetCentralityGetterFunction([](const Event& event) -> double {
             return event.centrality;
@@ -106,6 +111,13 @@ auto main() -> int {
     auto pz = TTreeReaderArray<double>(treeReader, "clusterPz");
     auto e  = TTreeReaderArray<double>(treeReader, "clusterE");
 
+    auto x = TTreeReaderArray<double>(treeReader, "clusterX");
+    auto y = TTreeReaderArray<double>(treeReader, "clusterY");
+    auto z = TTreeReaderArray<double>(treeReader, "clusterZ");
+
+    auto arm = TTreeReaderArray<int>(treeReader, "clusterArm");
+    auto sector = TTreeReaderArray<int>(treeReader, "clusterSector");
+
     auto centrality = TTreeReaderValue<double>(treeReader, "centrality");
     auto vertex = TTreeReaderValue<double>(treeReader, "vertex");
 
@@ -115,7 +127,8 @@ auto main() -> int {
         event.vertex = *vertex;
         
         for (auto i = 0ull; i < px.GetSize(); ++i) {
-            auto gamma = Gamma{px.At(i), py.At(i), pz.At(i), e.At(i)};
+            auto gamma = Gamma{px.At(i), py.At(i), pz.At(i), e.At(i),
+                               x.At(i), y.At(i), z.At(i), arm.At(i), sector.At(i)};
             event.clusters.push_back(gamma);
         }
 
