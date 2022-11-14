@@ -79,7 +79,7 @@ auto PairIsGood(const Event& event1, std::size_t i1,
 }
 
 auto main() -> int {
-    Mixer<Event> mixer(1, 1, 15, "output/out.root");
+    Mixer<Event> mixer{1, 1, 15, "output/out.root"};
     mixer.SetMixingType11(1);
     mixer.SetCentralityGetterFunction([](const Event& event) -> double {
             return event.centrality;
@@ -102,33 +102,34 @@ auto main() -> int {
 
     mixer.Print();
 
-    auto inputFile = std::make_unique<TFile>("input/se-out.root", "read");
-    auto tree = std::unique_ptr<TTree>{inputFile->Get<TTree>("AnalysisTree")};
+    TFile inputFile{"input/se-out.root", "read"};
+    auto tree = std::unique_ptr<TTree>{inputFile.Get<TTree>("AnalysisTree")};
 
-    auto&& treeReader = TTreeReader(tree.get());
-    auto px = TTreeReaderArray<double>(treeReader, "clusterPx");
-    auto py = TTreeReaderArray<double>(treeReader, "clusterPy");
-    auto pz = TTreeReaderArray<double>(treeReader, "clusterPz");
-    auto e  = TTreeReaderArray<double>(treeReader, "clusterE");
+    TTreeReader treeReader(tree.get());
 
-    auto x = TTreeReaderArray<double>(treeReader, "clusterX");
-    auto y = TTreeReaderArray<double>(treeReader, "clusterY");
-    auto z = TTreeReaderArray<double>(treeReader, "clusterZ");
+    TTreeReaderArray<double> px{treeReader, "clusterPx"};
+    TTreeReaderArray<double> py{treeReader, "clusterPy"};
+    TTreeReaderArray<double> pz{treeReader, "clusterPz"};
+    TTreeReaderArray<double> e{treeReader, "clusterE"};
 
-    auto arm = TTreeReaderArray<int>(treeReader, "clusterArm");
-    auto sector = TTreeReaderArray<int>(treeReader, "clusterSector");
+    TTreeReaderArray<double> x{treeReader, "clusterX"};
+    TTreeReaderArray<double> y{treeReader, "clusterY"};
+    TTreeReaderArray<double> z{treeReader, "clusterZ"};
 
-    auto centrality = TTreeReaderValue<double>(treeReader, "centrality");
-    auto vertex = TTreeReaderValue<double>(treeReader, "vertex");
+    TTreeReaderArray<int> arm{treeReader, "clusterArm"};
+    TTreeReaderArray<int> sector{treeReader, "clusterSector"};
+
+    TTreeReaderValue<double> centrality{treeReader, "centrality"};
+    TTreeReaderValue<double> vertex{treeReader, "vertex"};
 
     while (treeReader.Next()) {
-        auto event = Event{};
+        Event event{};
         event.centrality = *centrality;
         event.vertex = *vertex;
         
         for (auto i = 0ull; i < px.GetSize(); ++i) {
-            auto gamma = Gamma{px.At(i), py.At(i), pz.At(i), e.At(i),
-                               x.At(i), y.At(i), z.At(i), arm.At(i), sector.At(i)};
+            Gamma gamma{px.At(i), py.At(i), pz.At(i), e.At(i),
+                        x.At(i), y.At(i), z.At(i), arm.At(i), sector.At(i)};
             event.clusters.push_back(gamma);
         }
 
