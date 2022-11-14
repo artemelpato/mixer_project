@@ -122,6 +122,7 @@ auto main() -> int {
     TTreeReaderValue<double> centrality{treeReader, "centrality"};
     TTreeReaderValue<double> vertex{treeReader, "vertex"};
 
+    auto nEvents = 0ull;
     while (treeReader.Next()) {
         Event event{};
         event.centrality = *centrality;
@@ -134,6 +135,9 @@ auto main() -> int {
         }
 
         mixer.FillPools(event);
+
+        if (nEvents++ % 100000 == 0) 
+            std::cout << "Number of events: " << nEvents / 1000 << "k\n";
     }
     mixer.DrainAllPools();
     mixer.DumpHistos();

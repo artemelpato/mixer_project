@@ -246,7 +246,7 @@ public:
 
     auto DrainPool(const PoolType& pool) -> void {
         FillFG(pool);
-        //FillBG(pool);
+        FillBG(pool);
         return;
     }
 
@@ -326,32 +326,32 @@ private:
     }
 
     auto FillBG(const PoolType& pool) -> void {
-        //for (auto ev1 = begin(pool); ev1 != end(pool); ++ev1) {
-        //    for (auto ev2 = ev1 + 1; ev2 != end(pool); ++ev2) {
-        //        const auto size1 = getSize_(*ev1);
-        //        const auto size2 = getSize_(*ev2);
+        for (auto ev1 = begin(pool); ev1 != end(pool); ++ev1) {
+            for (auto ev2 = ev1 + 1; ev2 != end(pool); ++ev2) {
+                const auto size1 = getSize_(*ev1);
+                const auto size2 = getSize_(*ev2);
 
-        //        for (auto i1 = 0ull; i1 < size1; ++i1) {
-        //            for (auto i2 = 0ull; i2 < size2; ++i2) {
-        //                if (!pairIsGood_(*ev1, i1, *ev2, i2)) continue;
+                for (auto i1 = 0ull; i1 < size1; ++i1) {
+                    for (auto i2 = 0ull; i2 < size2; ++i2) {
+                        if (!pairIsGood_(*ev1, i1, *ev2, i2)) continue;
 
-        //                for (auto iOneDim = 0ull; iOneDim < oneDimHists_.size(); ++iOneDim) {
-        //                    const auto fillXValue = oneDimXFuncs_[iOneDim](*ev1, i1, *ev2, i2);
-        //                    oneDimHists_[iOneDim]->Fill(fillXValue);
-        //                }
+                        for (auto iOneDim = 0ull; iOneDim < oneDimHists_.at(0).size(); ++iOneDim) {
+                            const auto fillXValue = oneDimXFuncs_[iOneDim](*ev1, i1, *ev2, i2);
+                            //oneDimHists_[iOneDim]->Fill(fillXValue);
+                        }
 
-        //                for (auto iTwoDim = 0ull; iTwoDim < twoDimHists_.size(); ++iTwoDim) {
-        //                    const auto fillXValue = twoDimXFuncs_[iTwoDim](*ev1, i1, *ev2, i2);
-        //                    const auto fillYValue = twoDimYFuncs_[iTwoDim](*ev1, i1, *ev2, i2);
-        //                    twoDimHists_[iTwoDim]->Fill(fillXValue, fillYValue);
-        //                }
+                        for (auto iTwoDim = 0ull; iTwoDim < twoDimHists_.at(0).size(); ++iTwoDim) {
+                            const auto fillXValue = twoDimXFuncs_[iTwoDim](*ev1, i1, *ev2, i2);
+                            const auto fillYValue = twoDimYFuncs_[iTwoDim](*ev1, i1, *ev2, i2);
+                            //twoDimHists_[iTwoDim]->Fill(fillXValue, fillYValue);
+                        }
 
-        //                for (auto iThreeDim = 0ull; iThreeDim < threeDimHists_.size(); ++iThreeDim) {
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
+                        for (auto iThreeDim = 0ull; iThreeDim < threeDimHists_.at(0).size(); ++iThreeDim) {
+                        }
+                    }
+                }
+            }
+        }
 
         return;
     }
