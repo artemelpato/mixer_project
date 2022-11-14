@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cassert>
 #include <memory>
+#include <string>
 
 #include <TH1D.h>
 #include <TH2D.h> 
@@ -34,6 +35,8 @@ private:
     std::function<double(const EventType&)> getCent_;
     std::function<double(const EventType&)> getVert_;
     std::function<std::size_t(const EventType&)> getSize_;
+
+    std::vector<std::string> dirnames_;
 
     std::vector<std::vector<std::unique_ptr<TH1D>>> oneDimHists_;
     std::vector<std::vector<std::unique_ptr<TH2D>>> twoDimHists_;
@@ -76,7 +79,17 @@ public:
         oneDimHists_.resize(centPools_ * vertexPools_);
         twoDimHists_.resize(centPools_ * vertexPools_);
         threeDimHists_.resize(centPools_ * vertexPools_);
-        std::cout << "[DEBUG] " << oneDimHists_.size() << '\n';
+        dirnames_.resize(centPools_ * vertexPools_);
+        
+        std::ostringstream str{};
+        for (auto icent = 0ull; icent < centPools_; ++icent) {
+            for (auto ivert = 0ull; ivert < vertexPools_; ++ivert) {
+                str << "c0" << icent << "_z0" << ivert << "_r00"; 
+                const auto poolIndex = icent * vertexPools_ + ivert;
+                dirnames_[poolIndex] = str.str();
+                str.str("");
+            }
+        }
     }
 
     Mixer(int centPools, int vertexPools, int poolDepth, const char* name) 
@@ -89,7 +102,17 @@ public:
         oneDimHists_.resize(centPools * vertexPools);
         twoDimHists_.resize(centPools * vertexPools);
         threeDimHists_.resize(centPools * vertexPools);
-        std::cout << "[DEBUG] " << oneDimHists_.size() << '\n';
+        dirnames_.resize(centPools * vertexPools);
+
+        std::ostringstream str{};
+        for (auto icent = 0ull; icent < centPools_; ++icent) {
+            for (auto ivert = 0ull; ivert < vertexPools_; ++ivert) {
+                str << "c0" << icent << "_z0" << ivert << "_r00"; 
+                const auto poolIndex = icent * vertexPools_ + ivert;
+                dirnames_[poolIndex] = str.str();
+                str.str("");
+            }
+        }
     }
 
     //~Mixer() {};
@@ -236,20 +259,15 @@ public:
 
     auto DumpHistos() -> void {
         outputFile_->cd();
-        for (const auto& hists : oneDimHists_) {
-            for (const auto& hist : hists) {
-                hist->Write();
-            }
+        for (const auto& dirname : dirnames_) {
+            outputFile_->mkdir(dirname.c_str());
         }
-        for (const auto& hists : twoDimHists_) {
-            for (const auto& hist : hists) {
-                hist->Write();
-            }
-        }
-        for (const auto& hists : threeDimHists_) {
-            for (const auto& hist : hists) {
-                hist->Write();
-            }
+
+        for (auto i = 0ull; i < dirnames_.size(); ++i) {
+            outputFile_->cd(dirnames_[i].c_str());
+            for (const auto& hist : oneDimHists_[i]) hist->Write();
+            for (const auto& hist : twoDimHists_[i]) hist->Write();
+            for (const auto& hist : threeDimHists_[i]) hist->Write();
         }
         outputFile_->Close();
 
