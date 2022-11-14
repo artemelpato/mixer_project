@@ -35,12 +35,14 @@ private:
     std::function<double(const EventType&)> getVert_;
     std::function<std::size_t(const EventType&)> getSize_;
 
-    std::vector<std::unique_ptr<TH1D>> oneDimHists_;
+    std::vector<std::vector<std::unique_ptr<TH1D>>> oneDimHists_;
+    std::vector<std::vector<std::unique_ptr<TH2D>>> twoDimHists_;
+    std::vector<std::vector<std::unique_ptr<TH3D>>> threeDimHists_;
+
     std::vector<std::function<double(
             const EventType&, std::size_t,
             const EventType&, std::size_t)>> oneDimXFuncs_;
 
-    std::vector<std::unique_ptr<TH2D>> twoDimHists_;
     std::vector<std::function<double(
             const EventType&, std::size_t,
             const EventType&, std::size_t)>> twoDimXFuncs_;
@@ -48,7 +50,6 @@ private:
             const EventType&, std::size_t,
             const EventType&, std::size_t)>> twoDimYFuncs_;
 
-    std::vector<std::unique_ptr<TH3D>> threeDimHists_;
     std::vector<std::function<double(
             const EventType&, std::size_t,
             const EventType&, std::size_t)>> threeDimXFuncs_;
@@ -70,8 +71,12 @@ public:
               outputFile_() {
 
         TH1::AddDirectory(false);
-        pools_.reserve(centPools_ * vertexPools_);
+        pools_.resize(centPools_ * vertexPools_);
         mixingTypes_.at(0) = 1; // default mixing type is 11;
+        oneDimHists_.resize(centPools_ * vertexPools_);
+        twoDimHists_.resize(centPools_ * vertexPools_);
+        threeDimHists_.resize(centPools_ * vertexPools_);
+        std::cout << "[DEBUG] " << oneDimHists_.size() << '\n';
     }
 
     Mixer(int centPools, int vertexPools, int poolDepth, const char* name) 
@@ -80,7 +85,11 @@ public:
         
         TH1::AddDirectory(false);
         mixingTypes_.at(0) = 1;
-        pools_.resize(centPools_ * vertexPools_);
+        pools_.resize(centPools * vertexPools);
+        oneDimHists_.resize(centPools * vertexPools);
+        twoDimHists_.resize(centPools * vertexPools);
+        threeDimHists_.resize(centPools * vertexPools);
+        std::cout << "[DEBUG] " << oneDimHists_.size() << '\n';
     }
 
     //~Mixer() {};
@@ -95,17 +104,23 @@ public:
 
     template <typename... Args>
     auto AddOneDimHist(Args... args) -> void {
-        oneDimHists_.push_back(std::make_unique<TH1D>(args...));
+        for (auto& hists : oneDimHists_) {
+            hists.push_back(std::make_unique<TH1D>(args...));
+        }
     }
 
     template <typename... Args>
     auto AddTwoDimHist(Args... args) -> void {
-        twoDimHists_.push_back(std::make_unique<TH2D>(args...));
+        for (auto& hists : twoDimHists_) {
+            hists.push_back(std::make_unique<TH2D>(args...));
+        }
     }
 
     template <typename... Args>
     auto AddThreeDimHist(Args... args) -> void {
-        threeDimHists_.push_back(std::make_unique<TH3D>(args...));
+        for (auto& hists : threeDimHists_) {
+            hists.push_back(std::make_unique<TH3D>(args...));
+        }
     }
 
     auto AddOneDimXFunc(std::function<double(const EventType&, std::size_t, const EventType&, std::size_t)> func) -> void {
@@ -145,19 +160,19 @@ public:
 
         str << '\n';
         str << "One Dim Hists\n";
-        for (const auto& hist : oneDimHists_) {
+        for (const auto& hist : oneDimHists_.at(0)) {
             str << hist->GetName() << '\n';
         }
 
         str << '\n';
         str << "Two Dim Hists\n";
-        for (const auto& hist : twoDimHists_) {
+        for (const auto& hist : twoDimHists_.at(0)) {
             str << hist->GetName() << '\n';
         }
 
         str << '\n';
         str << "Three Dim Hists\n";
-        for (const auto& hist : threeDimHists_) {
+        for (const auto& hist : threeDimHists_.at(0)) {
             str << hist->GetName() << '\n';
         }
 
@@ -192,10 +207,6 @@ public:
         const auto centrality = getCent_(event);
         const auto vertex = getVert_(event);
     
-        assert(centrality > centRange_[0] && centrality < centRange_[1] 
-                && "Centrality out of range!");
-        assert(vertex > vertRange_[0] && vertex < vertRange_[1]
-                && "Vertex out of range");
 
         const auto index = GetPoolIndex(centrality, vertex);
         pools_[index].push_back(event);
@@ -225,14 +236,20 @@ public:
 
     auto DumpHistos() -> void {
         outputFile_->cd();
-        for (const auto& hist : oneDimHists_) {
-            hist->Write();
+        for (const auto& hists : oneDimHists_) {
+            for (const auto& hist : hists) {
+                hist->Write();
+            }
         }
-        for (const auto& hist : twoDimHists_) {
-            hist->Write();
+        for (const auto& hists : twoDimHists_) {
+            for (const auto& hist : hists) {
+                hist->Write();
+            }
         }
-        for (const auto& hist : threeDimHists_) {
-            hist->Write();
+        for (const auto& hists : threeDimHists_) {
+            for (const auto& hist : hists) {
+                hist->Write();
+            }
         }
         outputFile_->Close();
 
@@ -241,6 +258,11 @@ public:
     
 private:
     auto GetPoolIndex(const double centrality, const double vertex) -> std::size_t {
+        assert(centrality > centRange_[0] && centrality < centRange_[1] 
+                && "Centrality out of range!");
+        assert(vertex > vertRange_[0] && vertex < vertRange_[1]
+                && "Vertex out of range");
+
         const auto centWidth = (centRange_[1] - centRange_[0]) / centPools_;
         const auto vertWidth = (vertRange_[1] - vertRange_[0]) / vertexPools_;
 
@@ -256,23 +278,27 @@ private:
     auto FillFG(const PoolType& pool) -> void {
         for (const auto& event : pool) {
             const auto eventSize = getSize_(event);
+            const auto centrality = getCent_(event);
+            const auto vertex = getVert_(event); 
+            const auto poolIndex = GetPoolIndex(centrality, vertex);
+
             for (auto i1 = 0ull; i1 < eventSize; ++i1) {
                 for (auto i2 = i1 + 1; i2 < eventSize; ++i2) {
                     
                     if (!pairIsGood_(event, i1, event, i2)) continue;
 
-                    for (auto iOneDim = 0ull; iOneDim < oneDimHists_.size(); ++iOneDim) {
+                    for (auto iOneDim = 0ull; iOneDim < oneDimHists_.at(0).size(); ++iOneDim) {
                         const auto fillXValue = oneDimXFuncs_[iOneDim](event, i1, event, i2);
-                        oneDimHists_[iOneDim]->Fill(fillXValue);
+                        oneDimHists_[poolIndex][iOneDim]->Fill(fillXValue);
                     }
 
-                    for (auto iTwoDim = 0ull; iTwoDim < twoDimHists_.size(); ++iTwoDim) {
+                    for (auto iTwoDim = 0ull; iTwoDim < twoDimHists_.at(0).size(); ++iTwoDim) {
                         const auto fillXValue = twoDimXFuncs_[iTwoDim](event, i1, event, i2);
                         const auto fillYValue = twoDimYFuncs_[iTwoDim](event, i1, event, i2);
-                        twoDimHists_[iTwoDim]->Fill(fillXValue, fillYValue);
+                        twoDimHists_[poolIndex][iTwoDim]->Fill(fillXValue, fillYValue);
                     }
 
-                    for (auto iThreeDim = 0ull; iThreeDim < threeDimHists_.size(); ++iThreeDim) {
+                    for (auto iThreeDim = 0ull; iThreeDim < threeDimHists_.at(0).size(); ++iThreeDim) {
                     }
 
                 }
@@ -282,32 +308,32 @@ private:
     }
 
     auto FillBG(const PoolType& pool) -> void {
-        for (auto ev1 = begin(pool); ev1 != end(pool); ++ev1) {
-            for (auto ev2 = ev1 + 1; ev2 != end(pool); ++ev2) {
-                const auto size1 = getSize_(*ev1);
-                const auto size2 = getSize_(*ev2);
+        //for (auto ev1 = begin(pool); ev1 != end(pool); ++ev1) {
+        //    for (auto ev2 = ev1 + 1; ev2 != end(pool); ++ev2) {
+        //        const auto size1 = getSize_(*ev1);
+        //        const auto size2 = getSize_(*ev2);
 
-                for (auto i1 = 0ull; i1 < size1; ++i1) {
-                    for (auto i2 = 0ull; i2 < size2; ++i2) {
-                        if (!pairIsGood_(*ev1, i1, *ev2, i2)) continue;
+        //        for (auto i1 = 0ull; i1 < size1; ++i1) {
+        //            for (auto i2 = 0ull; i2 < size2; ++i2) {
+        //                if (!pairIsGood_(*ev1, i1, *ev2, i2)) continue;
 
-                        for (auto iOneDim = 0ull; iOneDim < oneDimHists_.size(); ++iOneDim) {
-                            const auto fillXValue = oneDimXFuncs_[iOneDim](*ev1, i1, *ev2, i2);
-                            oneDimHists_[iOneDim]->Fill(fillXValue);
-                        }
+        //                for (auto iOneDim = 0ull; iOneDim < oneDimHists_.size(); ++iOneDim) {
+        //                    const auto fillXValue = oneDimXFuncs_[iOneDim](*ev1, i1, *ev2, i2);
+        //                    oneDimHists_[iOneDim]->Fill(fillXValue);
+        //                }
 
-                        for (auto iTwoDim = 0ull; iTwoDim < twoDimHists_.size(); ++iTwoDim) {
-                            const auto fillXValue = twoDimXFuncs_[iTwoDim](*ev1, i1, *ev2, i2);
-                            const auto fillYValue = twoDimYFuncs_[iTwoDim](*ev1, i1, *ev2, i2);
-                            twoDimHists_[iTwoDim]->Fill(fillXValue, fillYValue);
-                        }
+        //                for (auto iTwoDim = 0ull; iTwoDim < twoDimHists_.size(); ++iTwoDim) {
+        //                    const auto fillXValue = twoDimXFuncs_[iTwoDim](*ev1, i1, *ev2, i2);
+        //                    const auto fillYValue = twoDimYFuncs_[iTwoDim](*ev1, i1, *ev2, i2);
+        //                    twoDimHists_[iTwoDim]->Fill(fillXValue, fillYValue);
+        //                }
 
-                        for (auto iThreeDim = 0ull; iThreeDim < threeDimHists_.size(); ++iThreeDim) {
-                        }
-                    }
-                }
-            }
-        }
+        //                for (auto iThreeDim = 0ull; iThreeDim < threeDimHists_.size(); ++iThreeDim) {
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
 
         return;
     }

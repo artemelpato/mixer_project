@@ -79,7 +79,7 @@ auto PairIsGood(const Event& event1, std::size_t i1,
 }
 
 auto main() -> int {
-    Mixer<Event> mixer{1, 1, 15, "output/out.root"};
+    Mixer<Event> mixer{10, 6, 15, "output/out.root"};
     mixer.SetMixingType11(1);
     mixer.SetCentralityGetterFunction([](const Event& event) -> double {
             return event.centrality;
@@ -103,7 +103,7 @@ auto main() -> int {
     mixer.Print();
 
     TFile inputFile{"input/se-out.root", "read"};
-    auto tree = std::unique_ptr<TTree>{inputFile.Get<TTree>("AnalysisTree")};
+    std::unique_ptr<TTree> tree{inputFile.Get<TTree>("AnalysisTree")};
 
     TTreeReader treeReader(tree.get());
 
